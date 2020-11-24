@@ -1,0 +1,35 @@
+{
+  "name": "frontend",
+  "version": "0.0.1",
+  "description": "Frontend",
+  "main": "dist/index.html",
+  "author": "storm",
+  "license": "MIT",
+  "scripts": {
+    "build": "yarn clean && yarn transpile && cpy src/index.html lib/ && parcel build lib/index.html",
+    "clean": "rimraf dist rimraf .parcel-cache rimraf lib",
+    "start:dev": "yarn clean && parcel serve --no-cache src/index.html --port 3000",
+    "start:prod": "yarn build && parcel serve src/index.html --port 3000",
+    "transpile": "babel --root-mode upward --extensions '.tsx','.jsx','.js','ts' src --out-dir lib "
+  },
+  "dependencies": {
+    "@babel/cli": "^7.12.7",
+    "@babel/core": "^7.12.7",
+    "@babel/polyfill": "^7.12.1",
+    "@babel/preset-env": "^7.12.7",
+    "@babel/preset-react": "^7.12.7",
+    "@babel/preset-typescript": "^7.12.7",
+    "autoprefixer": "^9",
+    "core-js": "3.7.0",
+    "cross-env": "5.0.5",
+    "postcss": "^7",
+    "react": "^17.0.1",
+    "react-dom": "^17.0.1",
+    "tailwindcss": "npm:@tailwindcss/postcss7-compat"
+  },
+  "devDependencies": {
+    "@types/react": "^17.0.0",
+    "eslint-plugin-react": "^7.21.5",
+    "eslint-plugin-react-hooks": "^4.2.0"
+  }
+}
