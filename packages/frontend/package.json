@@ -6,11 +6,10 @@
   "author": "storm",
   "license": "MIT",
   "scripts": {
-    "build": "yarn clean && yarn transpile && cpy src/index.html lib/ && parcel build lib/index.html",
+    "build": "yarn transpile && parcel build lib/index.html",
     "clean": "rimraf dist rimraf .parcel-cache rimraf lib",
-    "start:dev": "yarn clean && parcel serve --no-cache src/index.html --port 3000",
-    "start:prod": "yarn build && parcel serve src/index.html --port 3000",
-    "transpile": "babel --root-mode upward --extensions '.tsx','.jsx','.js','ts' src --out-dir lib "
+    "start:dev": "parcel serve --no-cache src/index.html --port 4200",
+    "transpile": "babel --root-mode upward --extensions '.tsx','.jsx','.js','ts' src --out-dir lib --copy-files"
   },
   "dependencies": {
     "@babel/cli": "^7.12.7",

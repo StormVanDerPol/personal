@@ -3,11 +3,10 @@
   "version": "0.0.1",
   "description": "personal website",
   "scripts": {
-    "clean": "rimraf .parcel-cache",
-    "clean:deep": "concurrently -c bgBlue -p \"[clean]\" \"yarn clean\" -c bgRed -p \"[Refreshing depencies]\" \"rimraf node_modules && rimraf packages/*/node_modules && yarn\"",
-    "start:dev": "concurrently -c bgBlue -p \"[Frontend]\" \"yarn workspace frontend start:dev\"",
-    "start:prod": "concurrently \"yarn workspace frontend start:prod\"",
-    "build": "yarn workspace frontend build",
+    "clean": "rimraf .parcel-cache && yarn workspace frontend clean",
+    "start:dev": "concurrently -c bgBlue -n frontend \"yarn workspace frontend start:dev\"",
+    "prebuild": "yarn clean",
+    "build": "concurrently -c bgBlue -n frontend \"yarn workspace frontend build --no-source-maps\"",
     "lint": "yarn eslint .",
     "prettier:check": "yarn prettier --check .",
     "prettier:write": "yarn prettier --write ."
@@ -26,10 +25,10 @@
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^4.8.1",
     "@typescript-eslint/parser": "^4.8.1",
+    "cpy-cli": "^3.1.1",
     "eslint": "^7.13.0",
     "eslint-config-prettier": "^6.15.0",
     "eslint-plugin-prettier": "^3.1.4",
-    "cpy-cli": "^3.1.1",
     "husky": "^4.3.0",
     "parcel": "^2.0.0-beta.1",
     "prettier": "^2.2.0",

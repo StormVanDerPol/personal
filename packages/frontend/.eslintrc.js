@@ -1,15 +1,16 @@
+// eslint-disable-next-line no-undef
 module.exports = {
   env: {
     browser: true,
     es2021: true,
-    node: true,
   },
   extends: [
     "prettier",
     "prettier/react",
+    "plugin:react-hooks/recommended",
     "eslint:recommended",
     "plugin:react/recommended",
-    "plugin:react-hooks/recommended",
+    "plugin:@typescript-eslint/recommended",
   ],
   parser: "@typescript-eslint/parser",
   parserOptions: {
@@ -21,10 +22,8 @@ module.exports = {
   },
   plugins: ["react", "@typescript-eslint"],
   rules: {
-    "no-unused-vars": "error",
-    "react/jsx-filename-extension": "off",
-    "react/jsx-uses-react": "error",
-    "import/no-unresolved": "off",
-    "import/extensions": "off",
+    "@typescript-eslint/no-unused-vars": "error",
+    "@typescript-eslint/explicit-module-boundary-types": "off",
+    "@typescript-eslint/no-explicit-any": "off",
   },
 };
