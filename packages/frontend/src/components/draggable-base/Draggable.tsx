@@ -11,7 +11,7 @@ type DraggableProps = {
   className?: string;
   container?: HTMLDivElement;
   canDragOnContent?: boolean;
-  position?: { x: number; y: number };
+  initialPosition?: { x: number; y: number };
   index?: number;
   snap?: boolean;
   gridSize?: { x: number; y: number };
@@ -24,7 +24,7 @@ type DraggableProps = {
  * Draggable, requires to be wrapped by DragContainer
  * @prop  {HTMLDivElement} container - used to access the parent <DragContainer/>
  * @prop  {boolean} canDragOnContent - if true allows drag to activate when content is pressed
- * @prop  {x: number; y: number} position - Offsets position initially, changes will update position.
+ * @prop  {x: number; y: number} initialPosition - Offsets position initially, changes will update position.
  * @prop  {boolean} snap - if true snaps element to grid using a transition
  * @prop  {x: number; y: number} gridSize - Functionally defaults to the size of the element
  * @prop  {x: number; y: number} gridSpacing - Space between cells, defaults to 0
@@ -39,7 +39,7 @@ const Draggable = forwardRef(
       children,
       container,
       canDragOnContent,
-      position,
+      initialPosition = { x: 0, y: 0 },
       index,
       snap,
       gridSize,
@@ -54,6 +54,8 @@ const Draggable = forwardRef(
     const draggableRef = givenRef || localRef;
 
     const [draggable, setDraggable] = useState(null);
+
+    const [position, setPosition] = useState(initialPosition);
 
     //Store ref
     useEffect(() => {
@@ -101,21 +103,15 @@ const Draggable = forwardRef(
 
     // Sets initial position
     useEffect(() => {
-      if (draggable)
-        changePosition({
-          x: position?.x || 0,
-          y: position?.y || 0,
-        });
+      if (draggable) changePosition(position);
     }, [changePosition, draggable, position]);
 
     const handleDragStart = (e) => {
       if (!canDragOnContent) if (draggable !== e.target) return;
 
       draggable.active = true;
-
       draggable.lastX = draggable.lastX || 0;
       draggable.lastY = draggable.lastY || 0;
-
       draggable.initialX = e.clientX - draggable.lastX;
       draggable.initialY = e.clientY - draggable.lastY;
 
@@ -130,15 +126,15 @@ const Draggable = forwardRef(
       if (isDraggingClassName)
         draggable.className = `${draggable.className} ${isDraggingClassName}`;
 
-      if (transition) draggable.style.transition = "none";
+      if (transition) draggable.style.transition = null;
 
       if (!gridSize && snap)
         gridSize = { x: draggable.offsetWidth, y: draggable.offsetHeight };
 
       //Bind methods to window for ux
       if (window) {
-        window.onmousemove = handleDrag;
-        window.onmouseup = handleDragEnd;
+        window.addEventListener("mousemove", handleDrag);
+        window.addEventListener("mouseup", handleDragEnd);
       }
     };
 
@@ -155,6 +151,8 @@ const Draggable = forwardRef(
     const handleDragEnd = () => {
       //Set active to false so that handleDrag returns early
       draggable.active = false;
+      window.removeEventListener("mousemove", handleDrag);
+      window.removeEventListener("mouseup", handleDragEnd);
 
       if (isDraggingClassName)
         draggable.className = `${draggable.className}`.replace(
@@ -162,7 +160,8 @@ const Draggable = forwardRef(
           ""
         );
 
-      if (!snap) return;
+      if (!snap)
+        return setPosition({ x: draggable.currentX, y: draggable.currentY });
 
       const snapTo = {
         x: Math.round(draggable.currentX / gridSize?.x || 1),
@@ -179,9 +178,13 @@ const Draggable = forwardRef(
       if (transition) {
         draggable.style.transition = transition;
 
-        draggable.ontransitionend = () => {
-          draggable.style.transition = "none";
+        const endTransition = () => {
+          setPosition(endPosition);
+          draggable.style.transition = null;
+          draggable.removeEventListener("transitionend", endTransition);
         };
+
+        draggable.addEventListener("transitionend", endTransition);
       }
     };
 
