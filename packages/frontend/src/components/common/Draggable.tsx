@@ -1,15 +1,11 @@
-import React, { useRef } from "react";
+import React from "react";
 import useDraggable from "../../hooks/useDraggable";
 
-const Draggable = () => {
-  const ref = useRef(null);
-  const { active, position, setPosition } = useDraggable({
-    initialPosition: { x: 0, y: 0 },
-    ref: ref,
-  });
+const Draggable = ({ initialPosition = { x: 0, y: 0 } }) => {
+  const { ref, setPosition } = useDraggable(initialPosition, true);
 
   return (
-    <div ref={ref} className="inline-block p-10 bg-pink-500">
+    <div ref={ref} className="inline-block p-10 border bg-pink-500 absolute">
       <button
         onMouseDown={() => {
           setPosition({ x: 10, y: 100 });

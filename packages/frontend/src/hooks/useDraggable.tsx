@@ -1,70 +1,121 @@
-import { useCallback, useEffect, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 
 type Position = {
   x: number;
   y: number;
 };
 
-type UseDraggableConfig = {
-  initialPosition?: Position;
-  ref: any;
+const DraggablesContext = createContext([]);
+
+const range = (value, min, max) => {
+  console.log("value", value, "min", min, "max", max);
+  return value < min ? min : value > max ? max : value;
 };
 
-const useDraggable = (config: UseDraggableConfig) => {
-  const { initialPosition, ref } = config;
-
-  //Bind ref hack
+const useDraggable = (initialPosition?, orderZIndex?) => {
+  const draggables = useContext(DraggablesContext);
   const [draggable, setDraggable] = useState(null);
-  useEffect(() => {
-    if (ref.current) setDraggable(ref.current);
-  }, [ref]);
-
-  const [lastPosition, setLastPosition] = useState<Position>(initialPosition);
-
+  const [lastPosition, setLastPosition] = useState<Position>(
+    initialPosition || { x: 0, y: 0 }
+  );
   const [active, setActive] = useState<boolean>(false);
 
-  const changePosition = useCallback(
+  const callbackRef = useCallback((node) => setDraggable(node), []);
+
+  const setTransform = useCallback(
     (targetPosition: Position) => {
+      if (!draggable) return;
+
       const { x, y } = targetPosition;
       draggable.style.transform = `translate(${x}px, ${y}px)`;
     },
     [draggable]
   );
 
+  const setZIndex = () => {
+    if (!draggable) return;
+
+    const highestZIndex = Math.max(
+      ...draggables.map((d) => Number(d.style.zIndex))
+    );
+
+    if (draggable.style.zIndex != highestZIndex)
+      draggable.style.zIndex = highestZIndex + 1;
+
+    if (highestZIndex > draggables.length - 1) {
+      draggables.forEach((d) => {
+        d.style.zIndex = d.style.zIndex - 1;
+      });
+    }
+  };
+
+  //Init
+  useEffect(() => {
+    if (!draggable) return;
+    draggables.push(draggable);
+
+    console.log(draggables);
+
+    if (orderZIndex)
+      draggables.forEach((d, i) => {
+        d.style.zIndex = i;
+      });
+
+    if (initialPosition) setPosition(initialPosition);
+  }, [draggable]);
+
   //HANDLERS
   useEffect(() => {
-    const handleDragStart = (e: MouseEvent): void => {
-      console.log("start", draggable, e.target);
+    if (!draggable) return;
 
+    const handleDragStart = (e: MouseEvent): void => {
       if (draggable !== e.target) return;
 
-      draggable.initialPositionX = initialPosition.x;
-      draggable.initialPositionY = initialPosition.y;
+      draggable.initialPositionX = 0;
+      draggable.initialPositionY = 0;
 
       draggable.initialPositionX = e.clientX - lastPosition.x;
       draggable.initialPositionY = e.clientY - lastPosition.y;
 
+      if (orderZIndex) setZIndex();
+
       setActive(true);
     };
 
-    if (draggable) draggable.addEventListener("mousedown", handleDragStart);
+    draggable.addEventListener("mousedown", handleDragStart);
 
     return () => {
-      if (draggable)
-        draggable.removeEventListener("mousedown", handleDragStart);
+      draggable.removeEventListener("mousedown", handleDragStart);
     };
-  }, [draggable, initialPosition, lastPosition]);
+  }, [draggable, lastPosition]);
 
   useEffect(() => {
     const handleDrag = (e: MouseEvent): void => {
       e.preventDefault();
-
       if (!active || !draggable) return;
 
-      draggable.currentX = e.clientX - draggable.initialPositionX;
-      draggable.currentY = e.clientY - draggable.initialPositionY;
+      const parentNodeRect: DOMRect = draggable.offsetParent.getBoundingClientRect();
 
-      changePosition({ x: draggable.currentX, y: draggable.currentY });
+      console.log(e.clientX, e.clientY);
+
+      draggable.currentX = range(
+        e.clientX - draggable.initialPositionX,
+        0,
+        parentNodeRect.width - draggable.offsetWidth
+      );
+      draggable.currentY = range(
+        e.clientY - draggable.initialPositionY,
+        0,
+        parentNodeRect.height - draggable.offsetHeight
+      );
+
+      setTransform({ x: draggable.currentX, y: draggable.currentY });
     };
 
     const handleDragEnd = (): void => {
@@ -83,15 +134,15 @@ const useDraggable = (config: UseDraggableConfig) => {
         window.removeEventListener("mouseup", handleDragEnd);
       }
     };
-  }, [active, changePosition, draggable]);
+  }, [active, setTransform, draggable]);
 
-  //
+  //Changing position
   const setPosition = (position) => {
     setLastPosition(position);
-    changePosition(position);
+    setTransform(position);
   };
 
-  return { active, position: lastPosition, setPosition };
+  return { ref: callbackRef, active, position: lastPosition, setPosition };
 };
 
 export default useDraggable;
