@@ -1,0 +1,11 @@
+{
+  "name": "arashi-utils",
+  "version": "1.0.0",
+  "description": "arashi utils",
+  "main": "index.js",
+  "author": "storm",
+  "license": "ISC",
+  "dependencies": {
+    "cross-env": "5.0.5"
+  }
+}

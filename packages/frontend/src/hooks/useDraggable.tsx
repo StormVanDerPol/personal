@@ -1,3 +1,4 @@
+import { range } from "arashi-utils";
 import {
   createContext,
   useCallback,
@@ -6,27 +7,63 @@ import {
   useState,
 } from "react";
 
-type Position = {
+export type Position = {
   x: number;
   y: number;
 };
 
-const DraggablesContext = createContext([]);
+type InputEvent = MouseEvent & TouchEvent;
 
-const range = (value, min, max) => {
-  console.log("value", value, "min", min, "max", max);
-  return value < min ? min : value > max ? max : value;
+export type Draggable = HTMLElement & {
+  initialPosition: Position;
+  currentPosition: Position;
 };
 
-const useDraggable = (initialPosition?, orderZIndex?) => {
+export type SnapConfig = {
+  enabled?: boolean;
+  gridSize?: { width: number; height: number };
+  gridSpacing?: { width: number; height: number };
+  transition?: string;
+};
+
+type useDraggableConfig = {
+  initialPosition?: Position;
+  orderZIndex?: boolean;
+  snapConfig?: SnapConfig;
+};
+
+const DraggablesContext = createContext<Draggable[]>([]);
+
+/**
+ * A hook that returns a ref object which when attached to a node makes it draggable
+ * @returns ref, active, position, setPosition
+ * @property {Position} initialPosition
+ * @property {boolean} orderZIndex order by z-index on position change.
+ *
+ * -- snap config --
+ * @property {boolean} enabled
+ * @property {width: number, height: number} gridSize
+ * @property {width: number, height: number} gridSpacing
+ * @property {string} transition
+ */
+
+const useDraggable = ({
+  initialPosition,
+  orderZIndex,
+  snapConfig,
+}: useDraggableConfig) => {
   const draggables = useContext(DraggablesContext);
-  const [draggable, setDraggable] = useState(null);
+
+  const [draggable, setDraggable] = useState<Draggable>(null);
   const [lastPosition, setLastPosition] = useState<Position>(
     initialPosition || { x: 0, y: 0 }
   );
   const [active, setActive] = useState<boolean>(false);
 
-  const callbackRef = useCallback((node) => setDraggable(node), []);
+  const callbackRef = useCallback(
+    (node: Draggable): void => setDraggable(node),
+    []
+  );
 
   const setTransform = useCallback(
     (targetPosition: Position) => {
@@ -38,109 +75,148 @@ const useDraggable = (initialPosition?, orderZIndex?) => {
     [draggable]
   );
 
-  const setZIndex = () => {
-    if (!draggable) return;
+  const setPosition = (position: Position): void => {
+    setLastPosition(position);
+    setZIndex();
+    setTransform(position);
+  };
+  const setZIndex = (): void => {
+    if (!draggable || !orderZIndex) return;
+    draggable.style.zIndex = (
+      Math.max(...draggables.map((d) => Number(d.style.zIndex))) + 1
+    ).toString();
+  };
+  const snapToGrid = (): void => {
+    if (!snapConfig?.enabled) return;
 
-    const highestZIndex = Math.max(
-      ...draggables.map((d) => Number(d.style.zIndex))
-    );
+    const { gridSize, gridSpacing, transition } = snapConfig;
 
-    if (draggable.style.zIndex != highestZIndex)
-      draggable.style.zIndex = highestZIndex + 1;
+    const endPosition: Position = {
+      x:
+        Math.round(draggable.currentPosition.x / gridSize?.width || 1) *
+        ((gridSize?.width || 1) + (gridSpacing?.width || 0)),
+      y:
+        Math.round(draggable.currentPosition.y / gridSize?.height || 1) *
+        ((gridSize?.height || 1) + (gridSpacing?.height || 0)),
+    };
 
-    if (highestZIndex > draggables.length - 1) {
-      draggables.forEach((d) => {
-        d.style.zIndex = d.style.zIndex - 1;
-      });
+    setTransform(endPosition);
+
+    if (!transition) {
+      setLastPosition(endPosition);
+      return;
     }
+
+    draggable.style.transition = transition;
+
+    const endTransition = () => {
+      setLastPosition(endPosition);
+      draggable.style.transition = null;
+      draggable.removeEventListener("transitionend", endTransition);
+    };
+    draggable.addEventListener("transitionend", endTransition);
   };
 
-  //Init
-  useEffect(() => {
+  useEffect((): void => {
     if (!draggable) return;
     draggables.push(draggable);
 
-    console.log(draggables);
-
-    if (orderZIndex)
-      draggables.forEach((d, i) => {
-        d.style.zIndex = i;
+    orderZIndex &&
+      draggables.forEach((d, index) => {
+        d.style.zIndex = index.toString();
       });
 
-    if (initialPosition) setPosition(initialPosition);
+    initialPosition && setPosition(initialPosition);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draggable]);
 
   //HANDLERS
+  //drag start
   useEffect(() => {
     if (!draggable) return;
 
-    const handleDragStart = (e: MouseEvent): void => {
+    const handleDragStart = (e: InputEvent): void => {
       if (draggable !== e.target) return;
 
-      draggable.initialPositionX = 0;
-      draggable.initialPositionY = 0;
+      const isTouch = e.type === "touchstart";
 
-      draggable.initialPositionX = e.clientX - lastPosition.x;
-      draggable.initialPositionY = e.clientY - lastPosition.y;
+      draggable.initialPosition = {
+        x: (isTouch ? e.touches[0].clientX : e.clientX) - lastPosition.x,
+        y: (isTouch ? e.touches[0].clientY : e.clientY) - lastPosition.y,
+      };
 
-      if (orderZIndex) setZIndex();
+      setZIndex();
 
       setActive(true);
     };
 
     draggable.addEventListener("mousedown", handleDragStart);
+    draggable.addEventListener("touchstart", handleDragStart);
 
     return () => {
       draggable.removeEventListener("mousedown", handleDragStart);
+      draggable.removeEventListener("touchstart", handleDragStart);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draggable, lastPosition]);
-
+  //drag, drag end
   useEffect(() => {
-    const handleDrag = (e: MouseEvent): void => {
+    const handleDrag = (e: InputEvent): void => {
       e.preventDefault();
       if (!active || !draggable) return;
 
       const parentNodeRect: DOMRect = draggable.offsetParent.getBoundingClientRect();
 
-      console.log(e.clientX, e.clientY);
+      const isTouch = e.type === "touchmove";
 
-      draggable.currentX = range(
-        e.clientX - draggable.initialPositionX,
-        0,
-        parentNodeRect.width - draggable.offsetWidth
-      );
-      draggable.currentY = range(
-        e.clientY - draggable.initialPositionY,
-        0,
-        parentNodeRect.height - draggable.offsetHeight
-      );
+      draggable.currentPosition = {
+        x: range(
+          (isTouch ? e.touches[0].clientX : e.clientX) -
+            draggable.initialPosition.x,
+          0,
+          parentNodeRect.width - draggable.offsetWidth
+        ),
+        y: range(
+          (isTouch ? e.touches[0]?.clientY : e.clientY) -
+            draggable.initialPosition.y,
+          0,
+          parentNodeRect.height - draggable.offsetHeight
+        ),
+      };
 
-      setTransform({ x: draggable.currentX, y: draggable.currentY });
+      setTransform({
+        x: draggable.currentPosition.x,
+        y: draggable.currentPosition.y,
+      });
     };
 
     const handleDragEnd = (): void => {
       setActive(false);
-      setLastPosition({ x: draggable.currentX, y: draggable.currentY });
+      snapToGrid();
+      if (!snapConfig?.enabled)
+        setLastPosition({
+          x: draggable.currentPosition.x,
+          y: draggable.currentPosition.y,
+        });
     };
 
     if (active && window) {
       window.addEventListener("mousemove", handleDrag);
+      window.addEventListener("touchmove", handleDrag, { passive: false });
       window.addEventListener("mouseup", handleDragEnd);
+      window.addEventListener("touchend", handleDragEnd);
     }
 
     return () => {
       if (active && window) {
         window.removeEventListener("mousemove", handleDrag);
+        window.removeEventListener("touchmove", handleDrag);
         window.removeEventListener("mouseup", handleDragEnd);
+        window.removeEventListener("touchend", handleDragEnd);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active, setTransform, draggable]);
-
-  //Changing position
-  const setPosition = (position) => {
-    setLastPosition(position);
-    setTransform(position);
-  };
 
   return { ref: callbackRef, active, position: lastPosition, setPosition };
 };

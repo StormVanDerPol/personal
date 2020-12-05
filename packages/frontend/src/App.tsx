@@ -1,15 +1,11 @@
-import React, { useCallback, useRef } from "react";
-import Draggable from "./components/common/Draggable";
+import React from "react";
+import DraggableWindow from "./components/common/DraggableWindow";
 import { Desktop } from "./components/templeOs";
 
 export default function App() {
-  const ref = useCallback((node) => console.log(node), []);
-
   return (
-    <div ref={ref} className="m-5 relative w-96 h-96 bg-green-400">
-      <Draggable initialPosition={{ x: 250, y: 250 }} />
-      <Draggable />
-      <Draggable />
+    <div className="relative m-5 w-96 h-96 bg-green-400 draw-grid-16">
+      <DraggableWindow initialPosition={{ x: 250, y: 250 }} />
       {/* <Desktop /> */}
     </div>
   );
