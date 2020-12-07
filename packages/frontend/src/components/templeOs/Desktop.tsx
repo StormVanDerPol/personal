@@ -1,36 +1,45 @@
 import React, { createContext } from "react";
-import { DragContainer } from "../../components/draggable-base";
-import { DraggableWindow } from "../../components/templeOs";
-import { useWindows } from "../../hooks";
+import DraggableWindow from "./DraggableWindow";
+import { useWindows, useWindowsTypes } from "../../hooks";
 import TaskBar from "./TaskBar";
+import StatusBar from "./StatusBar";
 
-export const DesktopContext = createContext({} as any);
+export const DesktopContext = createContext({} as useWindowsTypes);
 
 export default function Desktop() {
-  const { windows, addWindow, removeWindow, minimizeWindow } = useWindows();
+  const {
+    windows,
+    addWindow,
+    removeWindow,
+    minimizeWindow,
+    activeWindowId,
+    setActiveWindowId,
+  } = useWindows();
 
   return (
     <DesktopContext.Provider
-      value={{ windows, addWindow, removeWindow, minimizeWindow }}
+      value={{
+        windows,
+        addWindow,
+        removeWindow,
+        minimizeWindow,
+        activeWindowId,
+        setActiveWindowId,
+      }}
     >
-      <div className="relative w-screen h-screen flex flex-col bg-blue-300">
-        <DragContainer className="overflow-hidden w-full flex-1 bg-green-400 draw-grid">
-          {windows.map((props) => {
-            const { title, children, key, ...otherProps } = props;
-
+      <div className="flex h-screen flex-col mx-auto">
+        <StatusBar />
+        <div className="relative overflow-hidden flex-1 bg-holy-white">
+          {windows?.map((props) => {
+            const { title, children, id, ...otherProps } = props;
             return (
               // eslint-disable-next-line react/jsx-key
-              <DraggableWindow
-                title={title}
-                key={key}
-                _key={key}
-                {...otherProps}
-              >
+              <DraggableWindow title={title} key={id} id={id} {...otherProps}>
                 {children}
               </DraggableWindow>
             );
           })}
-        </DragContainer>
+        </div>
 
         <TaskBar />
       </div>

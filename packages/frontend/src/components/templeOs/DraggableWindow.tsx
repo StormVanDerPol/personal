@@ -1,49 +1,95 @@
-import React, { useContext, useEffect, useRef, useState } from "react";
-import { Draggable } from "../draggable-base";
+import { checkInputBounds } from "arashi-utils";
+import React, { useContext, useEffect } from "react";
+import { useJankDrag, Position } from "../../hooks";
 import { DesktopContext } from "./Desktop";
 
-const DraggableWindow = (props) => {
+type DraggableWindowProps = {
+  initialPosition?: Position;
+  title?: string;
+  children?: any;
+  id: string;
+  minimized?: boolean;
+};
+
+const DraggableWindow = ({
+  initialPosition,
+  title,
+  children,
+  id,
+  minimized,
+}: DraggableWindowProps) => {
+  const { ref, node, lastPosition } = useJankDrag({
+    initialPosition,
+    orderZIndex: true,
+  });
+
   const {
-    title,
-    children,
-    outerClassName,
-    innerClassName,
-    minimized,
-    _key: key,
-    ...otherProps
-  } = props;
+    minimizeWindow,
+    removeWindow,
+    activeWindowId,
+    setActiveWindowId,
+  } = useContext(DesktopContext);
 
-  const { removeWindow } = useContext(DesktopContext);
+  const active = id === activeWindowId;
 
-  console.log(`draggable window - ${key} UPDATED`);
+  useEffect(() => {
+    if (!node) return;
+    const handleClickElsewhere = (e: MouseEvent & TouchEvent) => {
+      if (checkInputBounds(e, node) && !minimized) setActiveWindowId(id);
+    };
+    node.offsetParent.addEventListener("mousedown", handleClickElsewhere);
+    node.offsetParent.addEventListener("touchstart", handleClickElsewhere);
+    return () => {
+      node?.offsetParent?.removeEventListener(
+        "mousedown",
+        handleClickElsewhere
+      );
+      node?.offsetParent?.removeEventListener(
+        "touchstart",
+        handleClickElsewhere
+      );
+    };
+  }, [node, activeWindowId, id]);
 
   return (
-    <Draggable
-      // ref={ref}
-      {...otherProps}
-      snap
-      gridSize={{ x: 64, y: 64 }}
-      transition="transform 0.75s ease"
-      className={`bg-blue-800 border-2 rounded-md transition-opacity ${
-        minimized ? "opacity-0 pointer-events-none" : ""
-      } ${outerClassName || ""} overflow-hidden`}
+    <div
+      ref={ref}
+      className={`absolute border-holy-blue border-2 ${
+        minimized ? "pointer-events-none overflow-hidden w-10 h-10" : ""
+      }`}
     >
-      <div className="flex pointer-events-none justify-between">
-        <h3 className="p-2">{title}</h3>
+      <div
+        className={`flex text-holy-white  ${
+          active ? "bg-holy-blue text-holy-yellow" : "bg-holy-blue"
+        } pointer-events-none`}
+      >
+        <h2 className="">{title || "unnamed window"}</h2>
         <button
-          onMouseDown={() => removeWindow(key)}
-          className={`${
-            minimized ? "pointer-events-none" : "pointer-events-auto"
-          }`}
+          className="pointer-events-auto"
+          type="button"
+          onClick={() => minimizeWindow(id)}
         >
-          close
+          [-]
+        </button>
+        <button
+          className="pointer-events-auto"
+          type="button"
+          onClick={() => {
+            removeWindow(id);
+          }}
+        >
+          [x]
         </button>
       </div>
 
-      <div className={`p-5 bg-blue-500 ${innerClassName || ""}`}>
+      <div className="bg-holy-white">
+        <div>
+          Position: {lastPosition.x} {lastPosition.y}
+        </div>
+        {minimized && <div>Minimized</div>}
         {children}
       </div>
-    </Draggable>
+    </div>
   );
 };
 

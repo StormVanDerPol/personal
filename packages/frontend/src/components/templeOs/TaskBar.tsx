@@ -1,43 +1,71 @@
 import React, { useContext } from "react";
+
 import { DesktopContext } from "./Desktop";
 
-const TaskBar = ({ className }) => {
-  const { windows, addWindow, minimizeWindow } = useContext(DesktopContext);
+const TaskBarItem = ({
+  window: w,
+  activeWindowId,
+  setActiveWindowId,
+  minimizeWindow,
+}) => {
+  return (
+    <button
+      onClick={() => {
+        if (w.id !== activeWindowId && !w.minimized) {
+          setActiveWindowId(w.id);
+        } else minimizeWindow(w.id);
+      }}
+      type="button"
+      className={`mr-1 border-2 ${
+        w.minimized
+          ? "bg-holy-blue"
+          : `${
+              w.id === activeWindowId
+                ? "bg-holy-blue border-holy-yellow text-holy-yellow"
+                : "bg-holy-blue border-holy-white text-holy-white "
+            }`
+      }`}
+    >
+      {w.title || "untitled"}
+    </button>
+  );
+};
 
-  console.log(windows);
+type TaskBarProps = {
+  className: string;
+};
+
+const TaskBar = ({ className }: TaskBarProps) => {
+  const {
+    windows,
+    addWindow,
+    minimizeWindow,
+    activeWindowId,
+    setActiveWindowId,
+  } = useContext(DesktopContext);
 
   return (
-    <div className={`${className || ""} flex overflow-hidden`}>
+    <div
+      className={`${
+        className || ""
+      } relative flex bg-holy-blue overflow-hidden`}
+    >
       <button
+        type="button"
         className="p-2 mr-2"
-        onClick={() =>
-          addWindow({
-            title: "Test",
-            children: <span>I tried my best</span>,
-          })
-        }
+        onClick={() => addWindow({}, true)}
       >
         Add
       </button>
-
-      {windows?.map((window) => {
-        const { title, key, minimized } = window;
-        return (
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              minimizeWindow(key);
-            }}
-            className={`${
-              minimized ? "bg-green-700" : "bg-green-900"
-            } transition-color text-white py-2 px-4 rounded-sm mr-2`}
-            key={`minimize-${key}`}
-            {...window}
-          >
-            {title}
-          </button>
-        );
-      }) || location.reload()}
+      {windows?.map((w) => (
+        <TaskBarItem
+          key={w.id}
+          window={w}
+          activeWindowId={activeWindowId}
+          setActiveWindowId={setActiveWindowId}
+          minimizeWindow={minimizeWindow}
+        />
+      ))}
     </div>
   );
 };

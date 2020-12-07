@@ -4,24 +4,49 @@ import useUniqueKey from "./useUniqueKey";
 const useWindows = () => {
   const getKey = useUniqueKey();
   const [windows, setWindows] = useState([]);
+  const [activeWindowId, setActiveWindowId] = useState<string>(null);
 
-  const addWindow = (props) => {
-    setWindows([...windows, { ...props, key: getKey("window_new") }]);
+  const addWindow = (props?, setActive?) => {
+    const id = getKey("window");
+
+    setWindows([
+      ...windows,
+      {
+        ...props,
+        id,
+      },
+    ]);
+    setActive && setActiveWindowId(id);
   };
 
-  const removeWindow = (key) => {
-    console.log(key);
-
-    setWindows([...windows.filter((w) => w.key !== key)]);
+  const removeWindow = (id) => {
+    setWindows([...windows.filter((w) => w.id !== id)]);
   };
 
-  const minimizeWindow = (key) => {
-    const window = windows.find((w) => w.key === key);
+  const minimizeWindow = (id) => {
+    const window = windows.find((w) => w.id === id);
     window.minimized = window.minimized ? false : true;
     setWindows([...windows]);
+    setActiveWindowId(window.minimized ? null : id);
   };
 
-  return { windows, addWindow, removeWindow, minimizeWindow };
+  return {
+    windows,
+    addWindow,
+    removeWindow,
+    minimizeWindow,
+    activeWindowId,
+    setActiveWindowId,
+  } as useWindowsTypes;
+};
+
+export type useWindowsTypes = {
+  windows: any[];
+  addWindow: (props?, setActive?: boolean) => void;
+  removeWindow: (id) => void;
+  minimizeWindow: (id) => void;
+  activeWindowId: string;
+  setActiveWindowId: React.Dispatch<React.SetStateAction<string>>;
 };
 
 export default useWindows;

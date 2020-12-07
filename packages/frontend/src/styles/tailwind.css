@@ -1,3 +1,18 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+html {
+  font-family: "Press Start 2P", cursive;
+  letter-spacing: 0.125rem;
+}
+
+.temple {
+  width: 640px;
+  height: 480px;
+}
+
+button:focus,
+button:active {
+  outline: none;
+}
